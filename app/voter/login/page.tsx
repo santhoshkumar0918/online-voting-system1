@@ -28,13 +28,15 @@ export default function VoterLogin() {
     try {
       const { error } = await login(email, password, "voter");
       if (error) {
-        toast.error("Invalid email or password. Please try again.");
+        console.error("Login error:", error);
+        // Use toast or alert to show the error
+        alert(error.message || "Failed to login");
+        // Make sure to reset loading state
+        setIsLoading(false);
       }
     } catch (error: any) {
-      toast.error(
-        error.message || "An unexpected error occurred. Please try again."
-      );
-    } finally {
+      console.error("Login exception:", error);
+      alert(error.message || "An unexpected error occurred.");
       setIsLoading(false);
     }
   };
