@@ -83,14 +83,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     role: "voter" | "committee"
   ) => {
     try {
+      console.log("Login attempt:", email, role);
+
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error("Authentication error:", error);
         return { error };
       }
+
+      console.log("Auth success, checking role");
 
       // Check if user has correct role
       if (data.user) {
@@ -101,14 +106,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .single();
 
         if (roleError || !userData) {
+          console.error("User not found in users table:", roleError);
           await supabase.auth.signOut();
           return { error: new Error("User not found") };
         }
 
         if (userData.role !== role) {
+          console.error("Role mismatch:", userData.role, "vs", role);
           await supabase.auth.signOut();
           return { error: new Error(`You're not authorized as ${role}`) };
         }
+
+        console.log("Login successful, redirecting");
 
         // Redirect based on role
         if (role === "voter") {
@@ -120,6 +129,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error: null };
     } catch (error) {
+      console.error("Unexpected login error:", error);
       return { error };
     }
   };
@@ -154,6 +164,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         if (profileError) {
           // Cleanup if profile creation fails
+          console.error("Profile creation error:", profileError);
           return { error: profileError };
         }
 
@@ -167,6 +178,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       return { error: null };
     } catch (error) {
+      console.error("Signup error:", error);
       return { error };
     }
   };
