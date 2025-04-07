@@ -1,7 +1,6 @@
 "use client";
 
-import { useAuth } from "@/context/auth-context";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { createSupabaseClient } from "@/lib/supabase";
 import {
   Card,
@@ -15,70 +14,21 @@ import { Button } from "@/components/ui/button";
 import { Election } from "@/types/database.types";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useAuth } from "@/context/auth-context";
+import { useEffect } from "react";
+import { redirect } from "next/navigation";
 
 export default function VoterDashboard() {
-  const { user, isLoading, logout } = useAuth();
-  const [elections, setElections] = useState<Election[]>([]);
-  const [fetchingElections, setFetchingElections] = useState(true);
-  const [votedElections, setVotedElections] = useState<string[]>([]);
-  const supabase = createSupabaseClient();
-  const router = useRouter();
+  const { user, isLoading, userRole } = useAuth();
 
   useEffect(() => {
-    // Redirect if not authenticated
-    if (!isLoading && !user) {
-      router.push("/voter/login");
+    if (!isLoading && (!user || userRole !== "voter")) {
+      redirect("/voter/login");
     }
-  }, [user, isLoading, router]);
+  }, [isLoading, user, userRole]);
 
-  useEffect(() => {
-    const fetchElections = async () => {
-      if (!user) return;
-
-      setFetchingElections(true);
-      try {
-        // Fetch active elections
-        const { data: electionsData, error: electionsError } = await supabase
-          .from("elections")
-          .select("*")
-          .eq("is_active", true)
-          .order("start_time", { ascending: false });
-
-        if (electionsError) {
-          console.error("Error fetching elections:", electionsError);
-          return;
-        }
-
-        setElections(electionsData as Election[]);
-
-        // Fetch elections where the user has already voted
-        const { data: votesData, error: votesError } = await supabase
-          .from("votes")
-          .select("election_id")
-          .eq("voter_id", user.id);
-
-        if (votesError) {
-          console.error("Error fetching votes:", votesError);
-          return;
-        }
-
-        setVotedElections(votesData.map((vote) => vote.election_id));
-      } catch (error) {
-        console.error("Error in election fetch:", error);
-      } finally {
-        setFetchingElections(false);
-      }
-    };
-
-    fetchElections();
-  }, [user, supabase]);
-
-  if (isLoading || !user) {
-    return (
-      <div className="flex min-h-screen items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    );
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
