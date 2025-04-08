@@ -16,7 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useState } from "react";
-import { useToast } from "@/components/ui/use-toast";
+import toast from "react-hot-toast"; // Changed from shadcn toast
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { supabase } from "@/lib/supabase";
@@ -43,7 +43,6 @@ export function CreateElectionForm() {
     description: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { toast } = useToast();
   const router = useRouter();
   const { user } = useUser();
 
@@ -62,15 +61,15 @@ export function CreateElectionForm() {
   const addCandidate = () => {
     try {
       const result = candidateSchema.parse(newCandidate);
-      setCandidates([...candidates, result]);
+      setCandidates([
+        ...candidates,
+        { ...result, description: result.description || "" },
+      ]);
       setNewCandidate({ name: "", description: "" });
     } catch (error) {
       if (error instanceof z.ZodError) {
-        toast({
-          title: "Invalid candidate",
-          description: error.errors[0].message,
-          variant: "destructive",
-        });
+        // Changed to react-hot-toast
+        toast.error(error.errors[0].message);
       }
     }
   };
@@ -81,24 +80,21 @@ export function CreateElectionForm() {
 
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
     if (candidates.length < 2) {
-      toast({
-        title: "Not enough candidates",
-        description: "You need at least 2 candidates for an election.",
-        variant: "destructive",
-      });
+      // Changed to react-hot-toast
+      toast.error("You need at least 2 candidates for an election.");
       return;
     }
 
     if (!user) {
-      toast({
-        title: "Authentication error",
-        description: "You must be logged in to create an election.",
-        variant: "destructive",
-      });
+      // Changed to react-hot-toast
+      toast.error("You must be logged in to create an election.");
       return;
     }
 
     setIsSubmitting(true);
+
+    // Use a loading toast that we can dismiss later
+    const loadingToast = toast.loading("Creating election...");
 
     try {
       // Insert election
@@ -129,20 +125,19 @@ export function CreateElectionForm() {
 
       if (candidatesError) throw candidatesError;
 
-      toast({
-        title: "Election created",
-        description: "Your election has been created successfully.",
-      });
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success("Your election has been created successfully.");
 
       router.push("/committee/dashboard");
     } catch (error) {
       console.error("Error creating election:", error);
-      toast({
-        title: "Error",
-        description:
-          "There was an error creating the election. Please try again.",
-        variant: "destructive",
-      });
+
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+      toast.error(
+        "There was an error creating the election. Please try again."
+      );
     } finally {
       setIsSubmitting(false);
     }
