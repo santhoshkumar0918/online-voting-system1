@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import toast from "react-hot-toast";
 
 export function ResultsDisplay() {
   const [elections, setElections] = useState<Election[]>([]);
@@ -21,7 +21,6 @@ export function ResultsDisplay() {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [totalVotes, setTotalVotes] = useState<number>(0);
   const searchParams = useSearchParams();
-  const { toast } = useToast();
 
   useEffect(() => {
     const fetchElections = async () => {
@@ -34,25 +33,21 @@ export function ResultsDisplay() {
 
         if (error) throw error;
         setElections(data || []);
-        
+
         // If election ID is in URL params, select it
         const electionId = searchParams.get("id");
-        if (electionId && data?.some(e => e.id === electionId)) {
+        if (electionId && data?.some((e) => e.id === electionId)) {
           setSelectedElection(electionId);
           fetchResults(electionId);
         }
       } catch (error) {
         console.error("Error fetching elections:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load elections. Please try again.",
-          variant: "destructive",
-        });
+        toast.error("Failed to load elections. Please try again.");
       }
     };
 
     fetchElections();
-  }, [searchParams, toast]);
+  }, [searchParams]);
 
   const fetchResults = async (electionId: string) => {
     try {
@@ -66,33 +61,37 @@ export function ResultsDisplay() {
       setCandidates(candidatesData || []);
 
       // Count votes for each candidate
-      const { data: votesData, error: votesError } = await supabase
+      const { data: votesData, error: votesError } = (await supabase
         .from("votes")
-        .select("candidate_id, count")
-        .eq("election_id", electionId)
-        .group("candidate_id");
+        .select("candidate_id, count:count(*)", { count: "exact", head: false })
+        .eq("election_id", electionId)) as {
+        data: { candidate_id: string; count: string }[] | null;
+        error: any;
+      };
 
       if (votesError) throw votesError;
 
       // Format results
-      const formattedResults = candidatesData.map(candidate => {
-        const voteInfo = votesData.find(v => v.candidate_id === candidate.id);
-        return {
-          candidate_id: candidate.id,
-          candidate_name: candidate.name,
-          vote_count: voteInfo ? parseInt(voteInfo.count) : 0
-        };
-      }).sort((a, b) => b.vote_count - a.vote_count);
+      const formattedResults = candidatesData
+        .map((candidate) => {
+          const voteInfo = votesData?.find(
+            (v) => v.candidate_id === candidate.id
+          );
+          return {
+            candidate_id: candidate.id,
+            candidate_name: candidate.name,
+            vote_count: voteInfo ? parseInt(voteInfo.count) : 0,
+          };
+        })
+        .sort((a, b) => b.vote_count - a.vote_count);
 
       setResults(formattedResults);
-      setTotalVotes(formattedResults.reduce((sum, result) => sum + result.vote_count, 0));
+      setTotalVotes(
+        formattedResults.reduce((sum, result) => sum + result.vote_count, 0)
+      );
     } catch (error) {
       console.error("Error fetching results:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load election results. Please try again.",
-        variant: "destructive",
-      });
+      toast.error("Failed to load election results. Please try again.");
     }
   };
 
@@ -110,7 +109,10 @@ export function ResultsDisplay() {
         <CardContent>
           <div className="space-y-4">
             <div className="max-w-xs">
-              <Select value={selectedElection || ""} onValueChange={handleElectionChange}>
+              <Select
+                value={selectedElection || ""}
+                onValueChange={handleElectionChange}
+              >
                 <SelectTrigger>
                   <SelectValue placeholder="Select an election" />
                 </SelectTrigger>
@@ -131,7 +133,9 @@ export function ResultsDisplay() {
                     <div key={result.candidate_id} className="space-y-2">
                       <div className="flex justify-between items-center">
                         <div>
-                          <span className="font-medium">{result.candidate_name}</span>
+                          <span className="font-medium">
+                            {result.candidate_name}
+                          </span>
                           {index === 0 && (
                             <span className="ml-2 text-sm bg-green-100 text-green-800 px-2 py-0.5 rounded">
                               Winner
@@ -139,15 +143,22 @@ export function ResultsDisplay() {
                           )}
                         </div>
                         <span className="text-sm font-medium">
-                          {result.vote_count} vote{result.vote_count !== 1 ? "s" : ""} 
-                          {totalVotes > 0 && ` (${Math.round((result.vote_count / totalVotes) * 100)}%)`}
+                          {result.vote_count} vote
+                          {result.vote_count !== 1 ? "s" : ""}
+                          {totalVotes > 0 &&
+                            ` (${Math.round(
+                              (result.vote_count / totalVotes) * 100
+                            )}%)`}
                         </span>
                       </div>
                       <div className="w-full bg-gray-200 rounded-full h-2.5">
                         <div
                           className="bg-blue-600 h-2.5 rounded-full"
                           style={{
-                            width: totalVotes > 0 ? `${(result.vote_count / totalVotes) * 100}%` : "0%",
+                            width:
+                              totalVotes > 0
+                                ? `${(result.vote_count / totalVotes) * 100}%`
+                                : "0%",
                           }}
                         ></div>
                       </div>
@@ -172,3 +183,4 @@ export function ResultsDisplay() {
       </Card>
     </div>
   );
+}
