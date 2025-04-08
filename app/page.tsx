@@ -1,9 +1,9 @@
 import { Button } from "@/components/ui/button";
-import { auth } from "@clerk/nextjs";
+import { currentUser } from "@clerk/nextjs/server";
 import Link from "next/link";
 
-export default function Home() {
-  const { userId } = auth();
+export default async function Home() {
+  const user = await currentUser();
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
@@ -13,7 +13,7 @@ export default function Home() {
       </div>
 
       <div className="flex gap-4">
-        {userId ? (
+        {user ? (
           <Button asChild>
             <Link href="/voter/dashboard">Go to Dashboard</Link>
           </Button>
