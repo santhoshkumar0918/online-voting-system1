@@ -14,14 +14,13 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useToast } from "@/components/ui/use-toast";
+import toast from "react-hot-toast"; // Changed from shadcn toast
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 
 export function ElectionList() {
   const [elections, setElections] = useState<Election[]>([]);
   const [loading, setLoading] = useState(true);
-  const { toast } = useToast();
   const router = useRouter();
   const { user } = useUser();
 
@@ -40,23 +39,23 @@ export function ElectionList() {
         setElections(data || []);
       } catch (error) {
         console.error("Error fetching elections:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load elections. Please try again.",
-          variant: "destructive",
-        });
+        // Changed to react-hot-toast
+        toast.error("Failed to load elections. Please try again.");
       } finally {
         setLoading(false);
       }
     };
 
     fetchElections();
-  }, [user, toast]);
+  }, [user]);
 
   const handleStatusChange = async (
     id: string,
     newStatus: Election["status"]
   ) => {
+    // Show loading toast
+    const loadingToast = toast.loading("Updating status...");
+
     try {
       const { error } = await supabase
         .from("elections")
@@ -72,17 +71,15 @@ export function ElectionList() {
         )
       );
 
-      toast({
-        title: "Status updated",
-        description: `Election status changed to ${newStatus}.`,
-      });
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success(`Election status changed to ${newStatus}.`);
     } catch (error) {
       console.error("Error updating status:", error);
-      toast({
-        title: "Error",
-        description: "Failed to update status. Please try again.",
-        variant: "destructive",
-      });
+
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+      toast.error("Failed to update status. Please try again.");
     }
   };
 
