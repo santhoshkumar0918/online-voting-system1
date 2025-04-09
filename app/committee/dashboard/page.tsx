@@ -1,4 +1,4 @@
-import { ElectionList } from "@/components/committee/election-list";
+import { ElectionList } from "@/components/committee/election-lisit";
 
 export default function CommitteeDashboard() {
   return (
